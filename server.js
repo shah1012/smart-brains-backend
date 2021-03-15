@@ -3,6 +3,19 @@ const bcrypt = require("bcrypt-nodejs");
 const cors = require("cors");
 const app = express();
 
+//connecting to our Psql database
+const knex = require("knex");
+
+const db = knex({
+  client: "pg",
+  connection: {
+    host: "127.0.0.1",
+    user: process.env.username,
+    password: process.env.password,
+    database: "smartbrain",
+  },
+});
+
 app.use(express.json());
 app.use(cors());
 
@@ -46,16 +59,20 @@ app.post("/signin", (req, res) => {
 
 app.post("/register", (req, res) => {
   const { name, email, password } = req.body;
-
-  database.users.push({
-    id: "125",
-    name: name,
-    email: email,
-    entries: 0,
-    joined: new Date(),
-  });
-
-  res.json(database.users[database.users.length - 1]);
+  //inserting a new user into database
+  db("users")
+    .returning("*")
+    .insert({
+      email: email,
+      name: name,
+      joined: new Date(),
+    })
+    .then((user) => {
+      res.json(user[0]);
+    })
+    .catch((err) => {
+      res.status(400).json("unable to register");
+    });
 });
 
 app.get("/profile/:id", (req, res) => {
